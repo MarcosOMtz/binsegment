@@ -168,33 +168,39 @@ split(y~x+z, d, c('class1','class2'))
 split_one <- function(formula, data, segvar, ngroups = 100, ...){
   m0 <- glm(formula, data, family=binomial(link='logit'))
   yhat0 <- predict(m0, data, type='link')
-  wr0 <- wroc(yhat0, m0$y, ngroups = 100, ...)
+  g0 <- performance(yhat0, m0$y, ngroups = ngroups, ...)$gini
 
   classes <- levels(as.factor(data[[segvar]]))[1:2]
+  ix_A <- data[[segvar]] == classes[1]
+  ix_B <- data[[segvar]] == classes[2]
+  if(sum(ix_A) == 0 || sum(ix_B) == 0){
+    warning(sprintf('Variable %s has no levels of some of its classes. Skipping...', segvar))
+    return(NULL)
+  }
+  data_A <- data[ix_A,]
+  data_B <- data[ix_B,]
 
-  data_A <- data[data[[segvar]] == classes[1],]
   m_A <- glm(formula, data_A, family=binomial(link='logit'))
   yhat_A <- predict(m_A, data_A, type='link')
-  wr_A <- wroc(yhat_A, m_A$y, ngroups = 100, ...)
+  g_A <- performance(yhat_A, m_A$y, ngroups = ngroups, ...)$gini
 
-  data_B <- data[data[[segvar]] == classes[2],]
   m_B <- glm(formula, data_B, family=binomial(link='logit'))
   yhat_B <- predict(m_B, data_B, type='link')
-  wr_B <- wroc(yhat_B, m_B$y, ngroups = 100, ...)
+  g_B <- performance(yhat_B, m_B$y, ngroups = ngroups, ...)$gini
 
   yhat_ALL <- c(yhat_A, yhat_B)
   y_ALL <- c(m_A$y, m_B$y)
-  wr_ALL <- wroc(yhat_ALL, y_ALL, ngroups = 100, ...)
+  g_ALL <- performance(yhat_ALL, y_ALL, ngroups = ngroups, ...)$gini
 
   data.frame(
     variable = segvar,
     poblacion = nrow(data),
     p_pob_A = nrow(data_A)/nrow(data),
     p_pob_B = nrow(data_B)/nrow(data),
-    gini_TOT = performance(wr0)$gini,
-    gini_A_B = performance(wr_ALL)$gini,
-    gini_A = performance(wr_A)$gini,
-    gini_B = performance(wr_B)$gini,
+    gini_TOT = g0,
+    gini_A_B = g_ALL,
+    gini_A = g_A,
+    gini_B = g_B,
     tm_TOT = mean(m0$y),
     tm_A = mean(m_A$y),
     tm_B = mean(m_B$y),
@@ -222,11 +228,24 @@ fork <- function(data, segvar){
   )
 }
 
+leaf <- function(segvars,
+                 levels,
+                 name=paste0('leaf_',as.numeric(Sys.time())),
+                 splits=list()){
+  out <- list(
+    segvars = segvars,
+    levels = levels,
+    name = name,
+    splits = splits
+  )
+  class(out) <- 'leaf'
+  out
+}
+
 segtree.default <- function(formula, data, segvars){
   out <- list(
     formula = formula,
-    leaves = list(),
-    leaves_splits = list(),
+    leaves = list(leaf(NULL, NULL, 'root')),
     data = data,
     segvars = segvars
   )
@@ -234,30 +253,64 @@ segtree.default <- function(formula, data, segvars){
   out
 }
 
-split.segtree <- function(tree, leaf, leaf_levels){
-  if(is.null(leaf)){
+split.segtree <- function(tree, leaf){
+  if(is.character(leaf)){
+    leaf_ix <- which(sapply(tree$leaves, function(ll) ll$name == leaf))
+    if(length(leaf_ix) == 0){
+      stop(sprintf('Leaf %s does not exist.', leaf))
+    } else{
+      leaf <- tree$leaves[[leaf_ix]]
+    }
+  }
+
+  if(leaf$name == 'root'){
     dat <- tree$data
     segvars <- tree$segvars
   } else{
-    levs <- matrix(rep(leaf_levels, length(leaf)), ncol=length(leaf), byrow=T)
-    ix <- (data[,leaf] == levs) %>%
+    levs <- matrix(rep(leaf$levels, nrow(tree$data)),
+                   nrow = nrow(tree$data),
+                   ncol=length(leaf$levels),
+                   byrow=T)
+    ix <- (data[,leaf$segvars] == levs) %>%
       apply(1, all)
     rm(levs)
     dat <- tree$data[ix,]
-    segvars <- tree$segvars[!(tree$segvars %in% leaf)]
+    segvars <- tree$segvars[!(tree$segvars %in% leaf$segvars)]
   }
 
   split(tree$formula, dat, segvars)
 }
 
-fork.segtree <- function(tree, leaf, leaf_levels, segvar){
+fork.segtree <- function(tree, leaf, segvar, names){
+  if(is.character(leaf)){
+    leaf_ix <- which(sapply(tree$leaves, function(ll) ll$name == leaf))
+    if(length(leaf_ix) == 0){
+      stop(sprintf('Leaf %s does not exist.', leaf))
+    } else{
+      leaf <- tree$leaves[[leaf_ix]]
+    }
+  } else if(class(leaf) == 'leaf'){
+    leaf_ix <- which(sapply(tree$leaves, function(ll) ll$name == leaf$name))
+    if(length(leaf_ix) == 0){
+      stop(sprintf('Leaf %s does not exist.', leaf$name))
+    }
+  } else{
+    stop('Please supply a leaf name or a leaf object.')
+  }
+
+  classes <- levels(as.factor(data[[segvar]]))[1:2]
+  leaf_A <- leaf(
+    segvars = c(leaf$segvars, segvar),
+    levels = c(leaf$levels, classes[1]),
+    name = names[1],####
+  )
   tree$leaves <- c(tree$leaves, leaf)
   tree$leaves_splits <- c(tree$leaves_splits, split.segtree(tree, leaf, leaf_levels))
 }
 
-tt <- segtree.default(y ~ x + z, d, c('class1','class2','class3'))
-split.segtree(tt, NULL, NULL)
-tt <- fork.segtree(tt, 'class3', )
+tt <- segtree.default(y ~ x + z, (d), c('class1','class2','class3'))
+split.segtree(tt, 'root')
+# tt <- fork.segtree(tt, 'class3', )
 
 
 
