@@ -23,7 +23,8 @@ bads <- data.frame(
 d <- rbind(goods, bads) %>%
   mutate(y = factor(y),
          class1 = factor(ifelse(runif(ng+nb) < abs(x/max(x)), 'A', 'B')),
-         class2 = factor(ifelse(runif(ng+nb) < abs(x*z/max(x*z)), 'C', 'D')))
+         class2 = factor(ifelse(runif(ng+nb) < abs(x*z/max(x*z)), 'C', 'D')),
+         class3 = factor(ifelse(runif(ng+nb) < abs((x+z)/max(x+z)), 'X', 'Z')))
 
 ggplot(d, aes(x, fill=y)) +
   geom_density(alpha=0.5) +
@@ -169,7 +170,7 @@ split_one <- function(formula, data, segvar, ngroups = 100, ...){
   yhat0 <- predict(m0, data, type='link')
   wr0 <- wroc(yhat0, m0$y, ngroups = 100, ...)
 
-  classes <- levels(data[[segvar]])[1:2]
+  classes <- levels(as.factor(data[[segvar]]))[1:2]
 
   data_A <- data[data[[segvar]] == classes[1],]
   m_A <- glm(formula, data_A, family=binomial(link='logit'))
@@ -194,6 +195,9 @@ split_one <- function(formula, data, segvar, ngroups = 100, ...){
     gini_A_B = performance(wr_ALL)$gini,
     gini_A = performance(wr_A)$gini,
     gini_B = performance(wr_B)$gini,
+    tm_TOT = mean(m0$y),
+    tm_A = mean(m_A$y),
+    tm_B = mean(m_B$y),
     stringsAsFactors = F
   )
 }
@@ -201,7 +205,7 @@ split_one <- function(formula, data, segvar, ngroups = 100, ...){
 split_one(y ~ x + z, d, 'class1')
 
 
-split <- function(formula, data, segvars, ngroups = 100, ...){
+split.default <- function(formula, data, segvars, ngroups = 100, ...){
   s <- lapply(segvars, function(v){
     split_one(formula, data, v, ngroups, ...)
   })
@@ -210,14 +214,50 @@ split <- function(formula, data, segvars, ngroups = 100, ...){
 
 split(y ~ x + z, d, c('class1','class2'))
 
+fork <- function(data, segvar){
+  classes <- levels(as.factor(data[[segvar]]))[1:2]
+  list(
+    data_A = data[data[[segvar]] == classes[1]],
+    data_B = data[data[[segvar]] == classes[1]]
+  )
+}
 
+segtree.default <- function(formula, data, segvars){
+  out <- list(
+    formula = formula,
+    leaves = list(),
+    leaves_splits = list(),
+    data = data,
+    segvars = segvars
+  )
+  class(out) <- c('segtree')
+  out
+}
 
+split.segtree <- function(tree, leaf, leaf_levels){
+  if(is.null(leaf)){
+    dat <- tree$data
+    segvars <- tree$segvars
+  } else{
+    levs <- matrix(rep(leaf_levels, length(leaf)), ncol=length(leaf), byrow=T)
+    ix <- (data[,leaf] == levs) %>%
+      apply(1, all)
+    rm(levs)
+    dat <- tree$data[ix,]
+    segvars <- tree$segvars[!(tree$segvars %in% leaf)]
+  }
 
+  split(tree$formula, dat, segvars)
+}
 
+fork.segtree <- function(tree, leaf, leaf_levels, segvar){
+  tree$leaves <- c(tree$leaves, leaf)
+  tree$leaves_splits <- c(tree$leaves_splits, split.segtree(tree, leaf, leaf_levels))
+}
 
-
-
-
+tt <- segtree.default(y ~ x + z, d, c('class1','class2','class3'))
+split.segtree(tt, NULL, NULL)
+tt <- fork.segtree(tt, 'class3', )
 
 
 
