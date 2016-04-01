@@ -3,6 +3,7 @@
 require(dplyr)
 require(tidyr)
 require(ggplot2)
+library(optimbucket)
 
 #### Data 1
 ng <- 10000
@@ -158,6 +159,65 @@ split <- function(formula, data, segvars, significance = 0.05,
 }
 
 split(y~x+z, d, c('class1','class2'))
+
+
+
+
+
+split_one <- function(formula, data, segvar, ngroups = 100, ...){
+  m0 <- glm(formula, data, family=binomial(link='logit'))
+  yhat0 <- predict(m0, data, type='link')
+  wr0 <- wroc(yhat0, m0$y, ngroups = 100, ...)
+
+  classes <- levels(data[[segvar]])[1:2]
+
+  data_A <- data[data[[segvar]] == classes[1],]
+  m_A <- glm(formula, data_A, family=binomial(link='logit'))
+  yhat_A <- predict(m_A, data_A, type='link')
+  wr_A <- wroc(yhat_A, m_A$y, ngroups = 100, ...)
+
+  data_B <- data[data[[segvar]] == classes[2],]
+  m_B <- glm(formula, data_B, family=binomial(link='logit'))
+  yhat_B <- predict(m_B, data_B, type='link')
+  wr_B <- wroc(yhat_B, m_B$y, ngroups = 100, ...)
+
+  yhat_ALL <- c(yhat_A, yhat_B)
+  y_ALL <- c(m_A$y, m_B$y)
+  wr_ALL <- wroc(yhat_ALL, y_ALL, ngroups = 100, ...)
+
+  data.frame(
+    variable = segvar,
+    poblacion = nrow(data),
+    p_pob_A = nrow(data_A)/nrow(data),
+    p_pob_B = nrow(data_B)/nrow(data),
+    gini_TOT = performance(wr0)$gini,
+    gini_A_B = performance(wr_ALL)$gini,
+    gini_A = performance(wr_A)$gini,
+    gini_B = performance(wr_B)$gini,
+    stringsAsFactors = F
+  )
+}
+
+split_one(y ~ x + z, d, 'class1')
+
+
+split <- function(formula, data, segvars, ngroups = 100, ...){
+  s <- lapply(segvars, function(v){
+    split_one(formula, data, v, ngroups, ...)
+  })
+  do.call(rbind, s)
+}
+
+split(y ~ x + z, d, c('class1','class2'))
+
+
+
+
+
+
+
+
+
 
 
 
