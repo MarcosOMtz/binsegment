@@ -1,49 +1,8 @@
 
-
 require(dplyr)
 require(tidyr)
 require(ggplot2)
 require(optimbucket)
-
-#### Data 1
-ng <- 10000
-nb <- 1000
-
-goods <- data.frame(
-  x = round(rnorm(ng, mean = -2),2),
-  z = round(runif(ng, -3, 3)),
-  y = 0
-)
-bads <- data.frame(
-  x = rnorm(nb, 0, 1),
-  z = round(runif(nb, 0, 1)),
-  y = 1
-)
-
-d <- rbind(goods, bads) %>%
-  mutate(y = factor(y),
-         class1 = factor(ifelse(runif(ng+nb) < abs(x/max(x)), 'A', 'B')),
-         class2 = factor(ifelse(runif(ng+nb) < abs(x*z/max(x*z)), 'C', 'D')),
-         class3 = factor(ifelse(runif(ng+nb) < abs((x+z)/max(x+z)), 'X', 'Z')))
-
-ggplot(d, aes(x, fill=y)) +
-  geom_density(alpha=0.5) +
-  facet_wrap(~class1)
-
-ggplot(d, aes(z, fill=y)) +
-  geom_density(alpha=0.5) +
-  facet_wrap(~class1)
-
-
-m <- glm(y ~ x + z, data = d, family = 'binomial')
-s <- summary(m)
-
-d2 <- cbind(d, prob = m$fitted.values)
-ggplot(d2, aes(z, prob, fill=y)) +
-  geom_point() +
-  facet_wrap(~class1)
-
-
 
 split_one <- function(formula, data, segvar, ngroups = 100, ...){
   m0 <- glm(formula, data, family=binomial(link='logit'))
@@ -160,21 +119,69 @@ segtree <- function(formula, data, segvars, fast=FALSE, ...){
     leaves = list('root'=leaf(segvars=NULL, levels=NULL, name='root',
                               splits=splits)),
     data = data,
-    segvars = segvars
+    segvars = segvars,
+    fast = fast
   )
   class(out) <- c('segtree')
   out
 }
 
 print.segtree <- function(tree, ...){
-  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation tree\n\nNumber of leaves: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable segmentation variables:\n\t%s\nLeaves:\n\n',
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of leaves: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable segmentation variables:\n\t%s\nPopulation: %s\nLeaves:\n\n',
               length(tree$leaves),
               as.character(tree$formula[2]),
               as.character(tree$formula[3]),
-              paste(tree$segvars, collapse = ', ')))
+              paste(tree$segvars, collapse = ', '),
+              format(nrow(tree$d), scientific = F, big.mark = ',')))
   for(l in tree$leaves){
     print(l, global_pop = nrow(tree$data))
   }
+  cat('<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~')
+}
+
+summary.segtree <- function(tree){
+  out <- list(
+    population = nrow(tree$data),
+    leaves = length(tree$leaves),
+    formula = tree$formula,
+    segvars = tree$segvars
+  )
+  out$info <- data.frame(
+    leaf = sapply(tree$leaves, function(l) l$name)
+  )
+  if(!tree$fast){
+    out$info <- data.frame(
+      leaf = out$info$leaf,
+      depth = sapply(tree$leaves, function(l) length(l$segvars)),
+      population = sapply(tree$leaves, function(l) l$splits$population),
+      p_population = sapply(tree$leaves, function(l) l$splits$population)/out$population,
+      best_split_distr_A = sapply(tree$leaves, function(l) l$splits$table$p_pob_A[1]),
+      best_split_distr_B = sapply(tree$leaves, function(l) l$splits$table$p_pob_B[1]),
+      p_pos = sapply(tree$leaves, function(l) l$splits$p_pos_TOT),
+      gini = sapply(tree$leaves, function(l) l$splits$gini_TOT),
+      best_split_gini = sapply(tree$leaves, function(l) l$splits$table$gini_A_B[1])
+    )
+  }
+  rownames(out$info) <- NULL
+  class(out) <- 'summary.segtree'
+  out
+}
+
+print.summary.segtree <- function(s, ...){
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree Summary\n\nNumber of leaves: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable segmentation variables:\n\t%s\nPopulation: %s\nLeaf summary:\n\n',
+              s$leaves,
+              as.character(s$formula[2]),
+              as.character(s$formula[3]),
+              paste(s$segvars, collapse = ', '),
+              format(s$population, scientific = F, big.mark = ',')))
+  s$info$best_split_distr <- sprintf('(%.0f%% / %.0f%%)',
+                                     100*s$info$best_split_distr_A,
+                                     100*s$info$best_split_distr_B)
+  s$info$population <- format(s$info$population, scientific = F, big.mark = ',')
+  p_vars <- c('p_population','p_pos')
+  s$info[p_vars] <- apply(s$info[p_vars], 2, scales::percent)
+  print(s$info[c('leaf','depth','population','p_population','best_split_distr',
+                 'p_pos','gini','best_split_gini')], digits=3)
   cat('<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~')
 }
 
@@ -232,9 +239,8 @@ print.segtree.split <- function(s, global_pop = NULL){
     print(s$table, digits = 3)
   }
 }
-tt$leaves$root$splits
 
-fork.segtree <- function(tree, leaf, segvar, names, fast=FALSE){
+fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
   if(is.character(leaf)){
     leaf_ix <- which(names(tree$leaves) == leaf)
     if(length(leaf_ix) == 0){
@@ -271,13 +277,6 @@ fork.segtree <- function(tree, leaf, segvar, names, fast=FALSE){
   }
   tree
 }
-
-tt <- segtree(y ~ x + z, (d), c('class1','class2','class3'), fast=F)
-# split.segtree(tt, 'root')
-tt$leaves$root$splits
-tt2 <- fork.segtree(tt, 'root', 'class3', c('L1_A', 'L1_B'), fast = F)
-# split.segtree(tt2, 'L1_A')
-tt3 <- fork.segtree(tt2, 'L1_A', 'class2', c('L1_A_L2_A', 'L1_A_L2_B'))
 
 
 
