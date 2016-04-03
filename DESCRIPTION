@@ -13,5 +13,6 @@ Depends:
 Imports:
     dplyr,
     ggplot2,
-    tidyr
+    tidyr,
+    optimbucket
 LazyData: TRUE
