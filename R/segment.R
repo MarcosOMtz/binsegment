@@ -3,7 +3,7 @@
 require(dplyr)
 require(tidyr)
 require(ggplot2)
-library(optimbucket)
+require(optimbucket)
 
 #### Data 1
 ng <- 10000
@@ -44,126 +44,6 @@ ggplot(d2, aes(z, prob, fill=y)) +
   facet_wrap(~class1)
 
 
-glms <- function(formula, data, segvar, family=binomial(link='logit'), ...){
-  if(!is.factor(data[[segvar]])){
-    warning('Segmentation variable must be a factor. Coercing to factor')
-    data[[segvar]] <- as.factor(data[[segvar]])
-  }
-  classes <- levels(data[[segvar]])[1:2]
-  models <- list()
-  models[[1]] <- glm(formula,
-                     data=data[data[[segvar]] == classes[1],],
-                     family=family,
-                     ...)
-  models[[2]] <- glm(formula,
-                     data=data[data[[segvar]] == classes[2],],
-                     family=family,
-                     ...)
-  covars <- list()
-  covars[[1]] <- vcov(models[[1]])
-  covars[[2]] <- vcov(models[[2]])
-
-  names(models) <- names(covars) <- classes
-
-  out <- list(
-    classes = classes,
-    models = models,
-    covars = covars,
-    formula = formula,
-    call = match.call()
-  )
-  class(out) <- c('list', 'glms')
-  out
-}
-
-m <- glms(y ~ x + z, data = d, 'class1')
-
-
-logistic <- function(z){
-  as.vector(1/(1 + exp(-z)))
-}
-
-logistic_derivative <- function(z){
-  s <- logistic(z)
-  s*(1-s)
-}
-
-plot(logistic, xlim=c(-4,4))
-plot(logistic_derivative, xlim=c(-4,4))
-
-var_probs <- function(x, beta, var_beta, add_ones = (length(beta) = ncol(x) + 1)){
-  if(is.vector(x)){
-    x <- matrix(x, nrow = 1)
-  } else if(is.data.frame(x)){
-    x <- as.matrix(x)
-  }
-  if(add_ones){
-    x <- cbind(1, x)
-  }
-  xf <- logistic_derivative(x %*% beta)*x
-  apply(xf, 1, function(v){
-    v %*% var_beta %*% v
-  })
-  # xf %*% var_beta %*% t(xf)
-}
-
-
-var_probs(d[1:10,c('x','z')], m$models$A$coefficients, m$covars$A)
-
-
-segment_test <- function(models, data, significance = 0.05){
-  x <- model.matrix(models$formula, data)
-  probs <- list()
-  probs[[1]] <- logistic(x %*% models$models[[1]]$coefficients)
-  probs[[2]] <- logistic(x %*% models$models[[2]]$coefficients)
-  vars <- list()
-  vars[[1]] <- var_probs(x,
-                         models$models[[1]]$coefficients,
-                         models$covars[[1]],
-                         add_ones = F)
-  vars[[2]] <- var_probs(x,
-                         models$models[[2]]$coefficients,
-                         models$covars[[2]],
-                         add_ones = F)
-  z <- (probs[[1]] - probs[[2]])/sqrt(vars[[1]] + vars[[2]])
-  pval <- pnorm(z, 0, 1)
-  pval <- 2*pmin(pval, 1-pval)
-  reject_null <- (pval <= significance)
-
-  out <- list(
-    statistic = z,
-    p_value = pval,
-    reject_null = reject_null,
-    num_rejections = sum(reject_null),
-    prob_reject = mean(reject_null),
-    mean_p_value = mean(pval),
-    sd_p_value = sd(pval)
-  )
-  class(out) <- c('list', 'segment_test')
-  out
-}
-
-a <- segment_test(m, d, 0.05)
-
-
-split <- function(formula, data, segvars, significance = 0.05,
-                  family = binomial(link='logit'), ...){
-  out <- lapply(segvars, function(v){
-    gs <- glms(formula, data, v, family, ...)
-    test <- segment_test(gs, data, significance)
-    temp <- as.data.frame(
-      test[c('num_rejections', 'prob_reject', 'mean_p_value', 'sd_p_value')]
-    )
-    cbind(variable=v, temp)
-  })
-  do.call(rbind, out)
-}
-
-split(y~x+z, d, c('class1','class2'))
-
-
-
-
 
 split_one <- function(formula, data, segvar, ngroups = 100, ...){
   m0 <- glm(formula, data, family=binomial(link='logit'))
@@ -194,16 +74,16 @@ split_one <- function(formula, data, segvar, ngroups = 100, ...){
 
   data.frame(
     variable = segvar,
-    poblacion = nrow(data),
+    population = nrow(data),
     p_pob_A = nrow(data_A)/nrow(data),
     p_pob_B = nrow(data_B)/nrow(data),
     gini_TOT = g0,
     gini_A_B = g_ALL,
     gini_A = g_A,
     gini_B = g_B,
-    tm_TOT = mean(m0$y),
-    tm_A = mean(m_A$y),
-    tm_B = mean(m_B$y),
+    p_pos_TOT = mean(m0$y),
+    p_pos_A = mean(m_A$y),
+    p_pos_B = mean(m_B$y),
     stringsAsFactors = F
   )
 }
@@ -215,7 +95,18 @@ split.formula <- function(formula, data, segvars, ngroups = 100, ...){
   s <- lapply(segvars, function(v){
     split_one(formula, data, v, ngroups, ...)
   })
-  do.call(rbind, s)
+  tab <- do.call(rbind, s) %>%
+    arrange(desc(gini_A_B)) %>%
+    mutate(rank = row_number())
+  out <- list(
+    population = tab$population[1],
+    p_pos_TOT = tab$p_pos_TOT[1],
+    gini_TOT = tab$gini_TOT[1],
+    table = tab[c('rank','variable','p_pob_A','p_pob_B','gini_A_B',
+                  'gini_A','gini_B','p_pos_A','p_pos_B')]
+  )
+  class(out) <- 'segtree.split'
+  out
 }
 
 split(y ~ x + z, d, c('class1','class2'))
@@ -243,6 +134,21 @@ leaf <- function(segvars,
   out
 }
 
+print.leaf <- function(ll, ...){
+  if(is.null(ll$segvars)){
+    def <- 'Root node'
+  } else{
+    def <- paste(paste(ll$segvars, ll$levels, sep=' = '),collapse=' > ')
+  }
+  cat(sprintf('----->>\nLeaf: %s\nDefinition:\n\t%s\nSplit:\n\n',
+              ll$name, def))
+  print(ll$splits, ...)
+  cat('<<-----\n')
+}
+tt$leaves$root
+tt2$leaves$L1_A
+tt3$leaves$L1_A_L2_A
+
 segtree <- function(formula, data, segvars, fast=FALSE, ...){
   if(fast){
     splits = list()
@@ -258,6 +164,18 @@ segtree <- function(formula, data, segvars, fast=FALSE, ...){
   )
   class(out) <- c('segtree')
   out
+}
+
+print.segtree <- function(tree, ...){
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation tree\n\nNumber of leaves: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable segmentation variables:\n\t%s\nLeaves:\n\n',
+              length(tree$leaves),
+              as.character(tree$formula[2]),
+              as.character(tree$formula[3]),
+              paste(tree$segvars, collapse = ', ')))
+  for(l in tree$leaves){
+    print(l, global_pop = nrow(tree$data))
+  }
+  cat('<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~')
 }
 
 split.segtree <- function(tree, leaf){
@@ -291,6 +209,30 @@ split.segtree <- function(tree, leaf){
 
   split.formula(tree$formula, dat, segvars)
 }
+
+print.segtree.split <- function(s, global_pop = NULL){
+  if(is.null(global_pop)){
+    cat(sprintf('Population: %s\nTotal P(Y = 1): %.2f%%\nTotal Gini Index: %.3f\nDetails:\n\n',
+                format(s$population, big.mark = ',', scientific = F),
+                100*s$p_pos_TOT, s$gini_TOT))
+    p_vars <- c('p_pob_A','p_pob_B','p_pos_A','p_pos_B')
+    s$table[p_vars] <- apply(s$table[p_vars], 2, scales::percent)
+    print(s$table, digits = 3)
+  } else{
+    p_glob <- s$population/global_pop
+    cat(sprintf('\nGlobal Population: %s\nPopulation: %s (%.1f%%)\nTotal P(Y = 1): %.2f%%\nTotal Gini Index: %.3f\nDetails:\n',
+                format(global_pop, big.mark = ',', scientific = F),
+                format(s$population, big.mark = ',', scientific = F),
+                100*p_glob,
+                100*s$p_pos_TOT, s$gini_TOT))
+    s$table$p_glob_A <- s$table$p_pob_A*p_glob
+    s$table$p_glob_B <- s$table$p_pob_B*p_glob
+    p_vars <- c('p_pob_A','p_pob_B','p_pos_A','p_pos_B','p_glob_A','p_glob_B')
+    s$table[p_vars] <- apply(s$table[p_vars], 2, scales::percent)
+    print(s$table, digits = 3)
+  }
+}
+tt$leaves$root$splits
 
 fork.segtree <- function(tree, leaf, segvar, names, fast=FALSE){
   if(is.character(leaf)){
@@ -331,9 +273,10 @@ fork.segtree <- function(tree, leaf, segvar, names, fast=FALSE){
 }
 
 tt <- segtree(y ~ x + z, (d), c('class1','class2','class3'), fast=F)
-#split.segtree(tt, 'root')
+# split.segtree(tt, 'root')
+tt$leaves$root$splits
 tt2 <- fork.segtree(tt, 'root', 'class3', c('L1_A', 'L1_B'), fast = F)
-split.segtree(tt2, 'L1_A')
+# split.segtree(tt2, 'L1_A')
 tt3 <- fork.segtree(tt2, 'L1_A', 'class2', c('L1_A_L2_A', 'L1_A_L2_B'))
 
 
