@@ -211,7 +211,7 @@ split_one <- function(formula, data, segvar, ngroups = 100, ...){
 split_one(y ~ x + z, d, 'class1')
 
 
-split.default <- function(formula, data, segvars, ngroups = 100, ...){
+split.formula <- function(formula, data, segvars, ngroups = 100, ...){
   s <- lapply(segvars, function(v){
     split_one(formula, data, v, ngroups, ...)
   })
@@ -220,6 +220,7 @@ split.default <- function(formula, data, segvars, ngroups = 100, ...){
 
 split(y ~ x + z, d, c('class1','class2'))
 
+# Useless for the moment
 fork <- function(data, segvar){
   classes <- levels(as.factor(data[[segvar]]))[1:2]
   list(
@@ -242,10 +243,16 @@ leaf <- function(segvars,
   out
 }
 
-segtree.default <- function(formula, data, segvars){
+segtree <- function(formula, data, segvars, fast=FALSE, ...){
+  if(fast){
+    splits = list()
+  } else{
+    splits=split.formula(formula, data, segvars, ...)
+  }
   out <- list(
     formula = formula,
-    leaves = list(leaf(NULL, NULL, 'root')),
+    leaves = list('root'=leaf(segvars=NULL, levels=NULL, name='root',
+                              splits=splits)),
     data = data,
     segvars = segvars
   )
@@ -254,8 +261,12 @@ segtree.default <- function(formula, data, segvars){
 }
 
 split.segtree <- function(tree, leaf){
-  if(is.character(leaf)){
-    leaf_ix <- which(sapply(tree$leaves, function(ll) ll$name == leaf))
+  if(class(tree) != 'segtree' ||
+     (class(leaf) != 'leaf' &&
+      class(leaf) != 'character')){
+    stop('Please provide a segtree and a leaf.')
+  } else if(is.character(leaf)){
+    leaf_ix <- which(names(tree$leaves) == leaf)
     if(length(leaf_ix) == 0){
       stop(sprintf('Leaf %s does not exist.', leaf))
     } else{
@@ -271,26 +282,26 @@ split.segtree <- function(tree, leaf){
                    nrow = nrow(tree$data),
                    ncol=length(leaf$levels),
                    byrow=T)
-    ix <- (data[,leaf$segvars] == levs) %>%
+    ix <- (tree$data[,leaf$segvars] == levs) %>%
       apply(1, all)
     rm(levs)
     dat <- tree$data[ix,]
     segvars <- tree$segvars[!(tree$segvars %in% leaf$segvars)]
   }
 
-  split(tree$formula, dat, segvars)
+  split.formula(tree$formula, dat, segvars)
 }
 
-fork.segtree <- function(tree, leaf, segvar, names){
+fork.segtree <- function(tree, leaf, segvar, names, fast=FALSE){
   if(is.character(leaf)){
-    leaf_ix <- which(sapply(tree$leaves, function(ll) ll$name == leaf))
+    leaf_ix <- which(names(tree$leaves) == leaf)
     if(length(leaf_ix) == 0){
       stop(sprintf('Leaf %s does not exist.', leaf))
     } else{
       leaf <- tree$leaves[[leaf_ix]]
     }
   } else if(class(leaf) == 'leaf'){
-    leaf_ix <- which(sapply(tree$leaves, function(ll) ll$name == leaf$name))
+    leaf_ix <- which(names(tree$leaves) == leaf$name)
     if(length(leaf_ix) == 0){
       stop(sprintf('Leaf %s does not exist.', leaf$name))
     }
@@ -298,19 +309,44 @@ fork.segtree <- function(tree, leaf, segvar, names){
     stop('Please supply a leaf name or a leaf object.')
   }
 
-  classes <- levels(as.factor(data[[segvar]]))[1:2]
+  classes <- levels(as.factor(tree$data[[segvar]]))[1:2]
   leaf_A <- leaf(
     segvars = c(leaf$segvars, segvar),
     levels = c(leaf$levels, classes[1]),
-    name = names[1],####
+    name = names[1]
   )
-  tree$leaves <- c(tree$leaves, leaf)
-  tree$leaves_splits <- c(tree$leaves_splits, split.segtree(tree, leaf, leaf_levels))
+  leaf_B <- leaf(
+    segvars = c(leaf$segvars, segvar),
+    levels = c(leaf$levels, classes[2]),
+    name = names[2]
+  )
+  new_leaves <- list(leaf_A,leaf_B)
+  names(new_leaves) <- names[1:2]
+  tree$leaves <- c(tree$leaves[-leaf_ix], new_leaves)
+  if(!fast){
+    tree$leaves[[names[1]]]$splits <- split.segtree(tree, names[1])
+    tree$leaves[[names[2]]]$splits <- split.segtree(tree, names[2])
+  }
+  tree
 }
 
-tt <- segtree.default(y ~ x + z, (d), c('class1','class2','class3'))
-split.segtree(tt, 'root')
-# tt <- fork.segtree(tt, 'class3', )
+tt <- segtree(y ~ x + z, (d), c('class1','class2','class3'), fast=F)
+#split.segtree(tt, 'root')
+tt2 <- fork.segtree(tt, 'root', 'class3', c('L1_A', 'L1_B'), fast = F)
+split.segtree(tt2, 'L1_A')
+tt3 <- fork.segtree(tt2, 'L1_A', 'class2', c('L1_A_L2_A', 'L1_A_L2_B'))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
