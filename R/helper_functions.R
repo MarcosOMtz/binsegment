@@ -53,15 +53,21 @@ split_.formula <- function(formula, data, segvars, ngroups = 100, ...){
   s <- lapply(segvars, function(v){
     split_one_(formula, data, v, ngroups, ...)
   })
-  tab <- do.call(rbind, s) %>%
-    arrange(desc(gini_A_B)) %>%
-    mutate(rank = row_number())
+  if(all(sapply(s, is.null))){
+    tab <- data.frame(rank=0,variable='N/A',p_pob_A=0,p_pob_B=0,gini_A_B=0,gini_A=0,gini_B=0,p_pos_A=0,p_pos_B=0)
+  } else{
+    tab <- do.call(rbind, s) %>%
+      arrange(desc(gini_A_B)) %>%
+      mutate(rank = row_number())
+    tab <- tab[c('rank','variable','p_pob_A','p_pob_B','gini_A_B',
+                 'gini_A','gini_B','p_pos_A','p_pos_B')]
+  }
+
   out <- list(
     population = nrow(data),
     p_pos_TOT = mean(as.numeric(as.character(data[[as.character(formula)[2]]]))),
     gini_TOT = g0,
-    table = tab[c('rank','variable','p_pob_A','p_pob_B','gini_A_B',
-                  'gini_A','gini_B','p_pos_A','p_pos_B')]
+    table = tab
   )
   class(out) <- 'segtree.split'
   out
