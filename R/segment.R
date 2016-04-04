@@ -5,10 +5,6 @@ require(ggplot2)
 require(optimbucket)
 
 split_one <- function(formula, data, segvar, ngroups = 100, ...){
-  m0 <- glm(formula, data, family=binomial(link='logit'))
-  yhat0 <- predict(m0, data, type='link')
-  g0 <- performance(yhat0, m0$y, ngroups = ngroups, ...)$gini
-
   classes <- levels(as.factor(data[[segvar]]))[1:2]
   ix_A <- data[[segvar]] == classes[1]
   ix_B <- data[[segvar]] == classes[2]
@@ -33,14 +29,11 @@ split_one <- function(formula, data, segvar, ngroups = 100, ...){
 
   data.frame(
     variable = segvar,
-    population = nrow(data),
     p_pob_A = nrow(data_A)/nrow(data),
     p_pob_B = nrow(data_B)/nrow(data),
-    gini_TOT = g0,
     gini_A_B = g_ALL,
     gini_A = g_A,
     gini_B = g_B,
-    p_pos_TOT = mean(m0$y),
     p_pos_A = mean(m_A$y),
     p_pos_B = mean(m_B$y),
     stringsAsFactors = F
@@ -48,6 +41,10 @@ split_one <- function(formula, data, segvar, ngroups = 100, ...){
 }
 
 split.formula <- function(formula, data, segvars, ngroups = 100, ...){
+  m0 <- glm(formula, data, family=binomial(link='logit'))
+  yhat0 <- predict(m0, data, type='link')
+  g0 <- performance(yhat0, m0$y, ngroups = ngroups, ...)$gini
+
   s <- lapply(segvars, function(v){
     split_one(formula, data, v, ngroups, ...)
   })
@@ -55,9 +52,9 @@ split.formula <- function(formula, data, segvars, ngroups = 100, ...){
     arrange(desc(gini_A_B)) %>%
     mutate(rank = row_number())
   out <- list(
-    population = tab$population[1],
-    p_pos_TOT = tab$p_pos_TOT[1],
-    gini_TOT = tab$gini_TOT[1],
+    population = nrow(data),
+    p_pos_TOT = mean(as.numeric(as.character(data[[as.character(formula)[2]]]))),
+    gini_TOT = g0,
     table = tab[c('rank','variable','p_pob_A','p_pob_B','gini_A_B',
                   'gini_A','gini_B','p_pos_A','p_pos_B')]
   )
