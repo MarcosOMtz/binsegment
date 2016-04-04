@@ -47,9 +47,6 @@ split_one <- function(formula, data, segvar, ngroups = 100, ...){
   )
 }
 
-split_one(y ~ x + z, d, 'class1')
-
-
 split.formula <- function(formula, data, segvars, ngroups = 100, ...){
   s <- lapply(segvars, function(v){
     split_one(formula, data, v, ngroups, ...)
@@ -67,8 +64,6 @@ split.formula <- function(formula, data, segvars, ngroups = 100, ...){
   class(out) <- 'segtree.split'
   out
 }
-
-split(y ~ x + z, d, c('class1','class2'))
 
 # Useless for the moment
 fork <- function(data, segvar){
@@ -104,9 +99,6 @@ print.leaf <- function(ll, ...){
   print(ll$splits, ...)
   cat('<<-----\n')
 }
-tt$leaves$root
-tt2$leaves$L1_A
-tt3$leaves$L1_A_L2_A
 
 segtree <- function(formula, data, segvars, fast=FALSE, ...){
   if(fast){
