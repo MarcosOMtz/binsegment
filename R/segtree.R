@@ -17,7 +17,7 @@ segtree <- function(formula, data, segvars, fast=FALSE, ...){
   out <- list(
     formula = formula,
     leaves = list('root'=leaf(segvars=NULL, levels=NULL, name='root',
-                              splits=splits)),
+                              splits=splits, terminal=TRUE)),
     data = data,
     segvars = segvars,
     gini = g0,
@@ -28,12 +28,19 @@ segtree <- function(formula, data, segvars, fast=FALSE, ...){
 }
 
 print.segtree <- function(tree, ...){
-  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of leaves: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable segmentation variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\nLeaves:\n\n',
-              length(tree$leaves),
-              as.character(tree$formula[2]),
-              as.character(tree$formula[3]),
-              paste(tree$segvars, collapse = ', '),
-              format(nrow(tree$d), scientific = F, big.mark = ','),
+  nnodes <- length(tree$leaves)
+  nleaves <- sum(sapply(tree$leaves, function(l) l$terminal))
+  target <- as.character(tree$formula[2])
+  feats <- as.character(tree$formula[3])
+  segvars <- paste(tree$segvars, collapse = ', ')
+  population <- format(nrow(tree$d), scientific = F, big.mark = ',')
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of leaves: %d\nNumber of intermediate nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable segmentation variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\nLeaves:\n\n',
+              nleaves,
+              nnodes - nleaves,
+              target,
+              feats,
+              segvars,
+              population,
               tree$gini))
   for(l in tree$leaves){
     print(l, global_pop = nrow(tree$data))
@@ -117,16 +124,20 @@ fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
   leaf_A <- leaf(
     segvars = c(leaf$segvars, segvar),
     levels = c(leaf$levels, classes[1]),
-    name = names[1]
+    name = names[1],
+    terminal = TRUE
   )
   leaf_B <- leaf(
     segvars = c(leaf$segvars, segvar),
     levels = c(leaf$levels, classes[2]),
-    name = names[2]
+    name = names[2],
+    terminal = TRUE
   )
+  tree$leaves[[leaf_ix]]$children <- c(tree$leaves$children, names)
+  tree$leaves[[leaf_ix]]$terminal <- FALSE
   new_leaves <- list(leaf_A,leaf_B)
   names(new_leaves) <- names[1:2]
-  tree$leaves <- c(tree$leaves[-leaf_ix], new_leaves)
+  tree$leaves <- c(tree$leaves, new_leaves)
   if(!fast){
     tree$leaves[[names[1]]]$splits <- split.segtree(tree, names[1])
     tree$leaves[[names[2]]]$splits <- split.segtree(tree, names[2])
@@ -134,8 +145,13 @@ fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
   tree
 }
 
-
-
+# plot.segtree <- function(tree){
+#   defs <- sapply(tree$leaves, function(ll){
+#     def <- paste(paste(ll$segvars, ll$levels, sep=' = '), collapse=' > ')
+#     cat(sprintf(''))
+#   })
+# }
+# plot.segtree(tt2)
 
 
 

@@ -7,12 +7,16 @@ require(optimbucket)
 leaf <- function(segvars,
                  levels,
                  name=paste0('leaf_',as.numeric(Sys.time())),
-                 splits=list()){
+                 splits=list(),
+                 children=c(),
+                 terminal=FALSE){
   out <- list(
     segvars = segvars,
     levels = levels,
     name = name,
-    splits = splits
+    splits = splits,
+    children = children,
+    terminal = terminal
   )
   class(out) <- 'leaf'
   out
@@ -24,8 +28,9 @@ print.leaf <- function(ll, ...){
   } else{
     def <- paste(paste(ll$segvars, ll$levels, sep=' = '),collapse=' > ')
   }
-  cat(sprintf('----->>\nLeaf: %s\nDefinition:\n\t%s\nSplit:\n\n',
-              ll$name, def))
+  terminal <- ifelse(ll$terminal, 'Yes', 'No')
+  cat(sprintf('----->>\nLeaf: %s\nTerminal: %s\nDefinition:\n\t%s\nChildren: %s\nSplit:\n\n',
+              ll$name, terminal, def, paste(ll$children, collapse=', ')))
   print(ll$splits, ...)
   cat('<<-----\n')
 }
