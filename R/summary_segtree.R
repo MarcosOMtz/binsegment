@@ -2,10 +2,12 @@
 summary.segtree <- function(tree){
   out <- list(
     population = nrow(tree$data),
-    leaves = length(tree$leaves),
+    leaves = sum(sapply(tree$leaves, function(l) l$terminal)),
+    intermediate_nodes = length(tree$leaves) - sum(sapply(tree$leaves, function(l) l$terminal)),
     formula = tree$formula,
     segvars = tree$segvars,
-    gini = tree$gini
+    gini = tree$gini,
+    structure = structure.segtree(tree)
   )
   out$info <- data.frame(
     leaf = sapply(tree$leaves, function(l) l$name)
@@ -29,13 +31,17 @@ summary.segtree <- function(tree){
 }
 
 print.summary.segtree <- function(s, ...){
-  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree Summary\n\nNumber of leaves: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable segmentation variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\nLeaf summary:\n\n',
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree Summary\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\n\nStructure:\n',
               s$leaves,
+              s$intermediate_nodes,
               as.character(s$formula[2]),
               as.character(s$formula[3]),
               paste(s$segvars, collapse = ', '),
               format(s$population, scientific = F, big.mark = ','),
               s$gini))
+  print(s$structure, prefix='\t')
+  cat('\n\nLeaf summary:\n\n')
+
   s$info$best_split_distr <- sprintf('(%.0f%% / %.0f%%)',
                                      100*s$info$best_split_distr_A,
                                      100*s$info$best_split_distr_B)

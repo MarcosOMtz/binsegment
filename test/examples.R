@@ -52,6 +52,8 @@ summary(tt2)
 tt2
 # split.segtree(tt2, 'L1_A')
 tt3 <- fork.segtree(tt2, 'L1_A', 'class2', c('L1_A_L2_A', 'L1_A_L2_B'))
+summary(tt3)
+tt3
 
 ############
 # Function tests

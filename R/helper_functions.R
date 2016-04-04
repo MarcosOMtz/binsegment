@@ -61,3 +61,38 @@ split_.formula <- function(formula, data, segvars, ngroups = 100, ...){
   class(out) <- 'segtree.split'
   out
 }
+
+structure.segtree <- function(tree, leaf_name='root'){
+  leaf <- tree$leaves[[leaf_name]]
+  depth <- length(leaf$segvars)
+  if(leaf$terminal){
+    if(depth == 0){
+      s <- sprintf('(%s)', leaf$name)
+    } else{
+      s <- sprintf('> %s = %s (%s)', leaf$segvars[depth], leaf$levels[depth], leaf$name)
+    }
+    s <- list(name=leaf_name, def=s, children=NULL)
+  } else{
+    if(depth == 0){
+      s <- sprintf('(%s)', leaf$name)
+    } else{
+      s <- sprintf('> %s = %s (%s)', leaf$segvars[depth], leaf$levels[depth], leaf$name)
+    }
+    s <- list(name=leaf_name,
+              def=s,
+              children=lapply(leaf$children, function(l) structure.segtree(tree, l)))
+  }
+  class(s) <- 'structure.segtree'
+  s
+}
+
+print.structure.segtree <- function(s, prefix = ''){
+  cat(sprintf('%s%s\n', prefix, s$def))
+  if(!is.null(s$children)){
+    for(c in s$children){
+      print(c, paste(prefix, '  '))
+    }
+  }
+}
+
+

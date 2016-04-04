@@ -34,7 +34,7 @@ print.segtree <- function(tree, ...){
   feats <- as.character(tree$formula[3])
   segvars <- paste(tree$segvars, collapse = ', ')
   population <- format(nrow(tree$d), scientific = F, big.mark = ',')
-  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of leaves: %d\nNumber of intermediate nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable segmentation variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\nLeaves:\n\n',
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\nLeaves:\n\n',
               nleaves,
               nnodes - nleaves,
               target,
