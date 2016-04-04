@@ -4,11 +4,16 @@ require(tidyr)
 require(ggplot2)
 require(optimbucket)
 
+percent <- function(x, digits=0){
+  fmt <- sprintf('%%.%df', digits)
+  sprintf(paste0(fmt,'%%'), 100*x)
+}
+
 split_one_ <- function(formula, data, segvar, ngroups = 100, ...){
   classes <- levels(as.factor(data[[segvar]]))[1:2]
   ix_A <- data[[segvar]] == classes[1]
   ix_B <- data[[segvar]] == classes[2]
-  if(sum(ix_A) == 0 || sum(ix_B) == 0){
+  if(length(unique(data[[segvar]])) < 2 || sum(ix_A) == 0 || sum(ix_B) == 0){
     warning(sprintf('Variable %s has no levels of some of its classes. Skipping...', segvar))
     return(NULL)
   }

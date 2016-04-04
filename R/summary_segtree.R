@@ -47,7 +47,7 @@ print.summary.segtree <- function(s, ...){
                                      100*s$info$best_split_distr_B)
   s$info$population <- format(s$info$population, scientific = F, big.mark = ',')
   p_vars <- c('p_population','p_pos')
-  s$info[p_vars] <- apply(s$info[p_vars], 2, scales::percent)
+  s$info[p_vars] <- apply(s$info[p_vars], 2, function(x) percent(x,1))
   print(s$info[c('leaf','depth','population','p_population','best_split_distr',
                  'p_pos','gini','best_split_gini')], digits=3)
   cat('<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~')

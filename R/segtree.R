@@ -98,7 +98,7 @@ print.segtree.split <- function(s, global_pop = NULL){
     s$table$p_glob_A <- s$table$p_pob_A*p_glob
     s$table$p_glob_B <- s$table$p_pob_B*p_glob
     p_vars <- c('p_pob_A','p_pob_B','p_pos_A','p_pos_B','p_glob_A','p_glob_B')
-    s$table[p_vars] <- apply(s$table[p_vars], 2, scales::percent)
+    s$table[p_vars] <- apply(s$table[p_vars], 2, function(x) percent(x,1))
     print(s$table, digits = 3)
   }
 }
