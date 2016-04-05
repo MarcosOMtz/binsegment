@@ -4,7 +4,7 @@ Title: Binary Segmentation Trees
 Version: 0.4.3
 Author: Felipe Gerard
 Maintainer: Felipe Gerard <felipegerard@gmail.com>
-Description: This package provides semi-automatic tools for producing client segmentations. It is based on the 2009 article by J. Scott Long "Group comparisons in logit and probit using predicted probabilities".
+Description: This package provides semi-automatic tools for producing client segmentations. It is based on the premise that a good segmentation should both improve the predictive power of a score (Gini Index) but also make sense for business.
 License: MIT
 Depends:
     R (>= 3.2.0)
