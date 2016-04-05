@@ -103,6 +103,8 @@ print.segtree.split <- function(s, global_pop = NULL){
   }
 }
 
+
+fork <- function(x, ...) UseMethod('fork')
 fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
   if(is.character(leaf)){
     leaf_ix <- which(names(tree$leaves) == leaf)
@@ -153,9 +155,61 @@ fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
 # }
 # plot.segtree(tt2)
 
+performance <- function(x, ...) UseMethod('performance')
+performance.segtree <- function(tree, ...){
+  leaves <- tree$leaves[sapply(tree$leaves, function(l) l$terminal)]
+  yhats <- list()
+  ys <- list()
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\nCalculating Performance of Tree with %d Terminal Nodes...\n\n',
+              length(leaves)))
+  for(i in 1:length(leaves)){
+    cat(sprintf('(%d/%d) Running Regression for Terminal Node %s\t@ %s\n',
+                i, length(leaves), leaves[[i]]$name, Sys.time()))
+    if(is.null(leaves[[i]]$levels)){
+      dat <- tree$data
+    } else{
+      levs <- matrix(rep(leaves[[i]]$levels, nrow(tree$data)),
+                     nrow = nrow(tree$data),
+                     ncol=length(leaves[[i]]$levels),
+                     byrow=T)
+      ix <- (tree$data[,leaves[[i]]$segvars] == levs) %>%
+        apply(1, all)
+      rm(levs)
+      dat <- tree$data[ix,]
+    }
+    m <- glm(tree$formula, data=dat, family=binomial(link='logit'))
+    ys[[i]] <- m$y
+    yhats[[i]] <- predict(m, newdata=dat, type='link')
+  }
+  y <- unlist(ys)
+  yhat <- unlist(yhats)
+  out <- list(
+    tree = tree,
+    performance = optimbucket::performance(yhat, y, ...)
+  )
+  class(out) <- 'performance.segtree'
+  out
+}
 
-
-
+print.performance.segtree <- function(object, ...){
+  tree <- object$tree
+  perf <- object$performance
+  nnodes <- length(tree$leaves)
+  nleaves <- sum(sapply(tree$leaves, function(l) l$terminal))
+  target <- as.character(tree$formula[2])
+  feats <- as.character(tree$formula[3])
+  segvars <- paste(tree$segvars, collapse = ', ')
+  population <- format(nrow(tree$d), scientific = F, big.mark = ',')
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\n\nGini Index Using Segmentation: %.3f\n<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~',
+              nleaves,
+              nnodes - nleaves,
+              target,
+              feats,
+              segvars,
+              population,
+              tree$gini,
+              perf$gini))
+}
 
 
 
