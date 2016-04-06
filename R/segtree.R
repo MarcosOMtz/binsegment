@@ -155,7 +155,7 @@ fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
 # }
 # plot.segtree(tt2)
 
-performance <- function(x, ...) UseMethod('performance')
+#performance <- function(x, ...) UseMethod('performance')
 performance.segtree <- function(tree, ...){
   leaves <- tree$leaves[sapply(tree$leaves, function(l) l$terminal)]
   yhats <- list()
