@@ -16,6 +16,7 @@ summary.segtree <- function(tree){
     out$info <- data.frame(
       leaf = out$info$leaf,
       depth = sapply(tree$leaves, function(l) length(l$segvars)),
+      terminal = sapply(tree$leaves, function(l) ifelse(l$terminal, 'Yes', 'No')),
       population = sapply(tree$leaves, function(l) l$splits$population),
       p_population = sapply(tree$leaves, function(l) l$splits$population)/out$population,
       best_split_distr_A = sapply(tree$leaves, function(l) l$splits$table$p_pob_A[1]),
@@ -39,7 +40,7 @@ print.summary.segtree <- function(s, ...){
               paste(s$segvars, collapse = ', '),
               format(s$population, scientific = F, big.mark = ','),
               s$gini))
-  print(s$structure, prefix='\t')
+  print.structure.segtree(s$structure, prefix='\t', ...)
   cat('\n\nLeaf summary:\n\n')
 
   s$info$best_split_distr <- sprintf('(%.0f%% / %.0f%%)',
@@ -48,7 +49,7 @@ print.summary.segtree <- function(s, ...){
   s$info$population <- format(s$info$population, scientific = F, big.mark = ',')
   p_vars <- c('p_population','p_pos')
   s$info[p_vars] <- apply(s$info[p_vars], 2, function(x) percent(x,1))
-  print(s$info[c('leaf','depth','population','p_population','best_split_distr',
+  print(s$info[c('leaf','depth','terminal','population','p_population','best_split_distr',
                  'p_pos','gini','best_split_gini')], digits=3)
   cat('<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~')
 }

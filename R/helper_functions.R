@@ -97,35 +97,60 @@ split_data <- function(tree, index.only = T, newdata=NULL, ...){
   }
 }
 
-structure.segtree <- function(tree, leaf_name='root'){
+structure.segtree <- function(tree, leaf_name = 'root'){
   leaf <- tree$leaves[[leaf_name]]
   depth <- length(leaf$segvars)
   if(leaf$terminal){
     if(depth == 0){
-      s <- sprintf('(%s)', leaf$name)
+      def <- sprintf('(%s)', leaf$name)
     } else{
-      s <- sprintf('> %s = %s (%s)', leaf$segvars[depth], leaf$levels[depth], leaf$name)
-    }
-    s <- list(name=leaf_name, def=s, children=NULL)
-  } else{
-    if(depth == 0){
-      s <- sprintf('(%s)', leaf$name)
-    } else{
-      s <- sprintf('> %s = %s (%s)', leaf$segvars[depth], leaf$levels[depth], leaf$name)
+      def <- sprintf('> %s = %s (%s)',
+                   leaf$segvars[depth], leaf$levels[depth], leaf$name)
     }
     s <- list(name=leaf_name,
-              def=s,
+              def=def,
+              details=list(
+                p_population=leaf$splits$population/nrow(tree$data),
+                p_pos=leaf$splits$p_pos_TOT,
+                gini=leaf$splits$gini_TOT
+              ),
+              children=NULL)
+  } else{
+    if(depth == 0){
+      def <- sprintf('(%s)', leaf$name)
+    } else{
+      def <- sprintf('> %s = %s (%s)', leaf$segvars[depth], leaf$levels[depth], leaf$name)
+    }
+    s <- list(name=leaf_name,
+              def=def,
+              details=list(
+                p_population=leaf$splits$population/nrow(tree$data),
+                p_pos=leaf$splits$p_pos_TOT,
+                gini=leaf$splits$gini_TOT
+              ),
               children=lapply(leaf$children, function(l) structure.segtree(tree, l)))
   }
   class(s) <- 'structure.segtree'
   s
 }
 
-print.structure.segtree <- function(s, prefix = ''){
-  cat(sprintf('%s%s\n', prefix, s$def))
+print.structure.segtree <- function(s, details = TRUE, prefix = '', level = 0){
+  if(level <= 0){
+    cat('[% pop, p(Y = 1), Gini]\n\n')
+  }
+  if(details && is.null(s$children)){
+    det <- sprintf(' --> [%s, %s, %.3f]',
+                   percent(s$details$p_population, 1),
+                   percent(s$details$p_pos, 1),
+                   s$details$gini)
+
+  } else{
+    det <- ''
+  }
+  cat(sprintf('%s%s %s\n', prefix, s$def, det))
   if(!is.null(s$children)){
     for(c in s$children){
-      print(c, paste(prefix, '  '))
+      print(c, details=details, prefix=paste(prefix, '  '), level=level+1)
     }
   }
 }
