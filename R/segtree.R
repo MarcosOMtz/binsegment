@@ -5,6 +5,20 @@ require(ggplot2)
 require(optimbucket)
 
 segtree <- function(formula, data, segvars, fast=FALSE, ...){
+
+  resp <- as.character(formula)[2]
+  regvars <- strsplit(as.character(formula)[3], split = ' \\+ ')[[1]]
+  if(!(resp %in% names(data))){
+    stop(sprintf('The response variable %s is not in the dataset.', resp))
+  }
+  if(!all(regvars %in% names(data))){
+    stop(sprintf('The following regression variables are not in the dataset: %s',
+                 paste(regvars[!(regvars %in% names(data))], collapse=', ')))
+  }
+  if(!all(segvars %in% names(data))){
+    stop(sprintf('The following segmentation variables are not in the dataset: %s',
+                 paste(segvars[!(segvars %in% names(data))], collapse=', ')))
+  }
   if(fast){
     splits <- list()
     g0 <- NULL
