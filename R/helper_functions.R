@@ -73,6 +73,30 @@ split_.formula <- function(formula, data, segvars, ngroups = 100, ...){
   out
 }
 
+leaf_index <- function(leaf, data){
+  apply(data[leaf$segvars], 1, function(x){
+    all(x == leaf$levels)
+  })
+}
+
+split_data <- function(tree, index.only = T, newdata=NULL, ...){
+  if(is.null(newdata)){
+    newdata <- tree$data
+  }
+  newdata <- as.data.frame(newdata)
+  leaves <- tree$leaves[sapply(tree$leaves, function(x) x$terminal)]
+  codes <- as.data.frame(lapply(1:length(leaves), function(i){
+    i*leaf_index(leaves[[i]], newdata)
+  })) %>%
+    apply(1, sum) %>%
+    names(leaves)[.]
+  if(index.only){
+    return(codes)
+  } else{
+    return(split.data.frame(newdata, as.factor(codes), ...))
+  }
+}
+
 structure.segtree <- function(tree, leaf_name='root'){
   leaf <- tree$leaves[[leaf_name]]
   depth <- length(leaf$segvars)
