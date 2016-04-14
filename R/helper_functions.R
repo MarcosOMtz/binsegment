@@ -135,17 +135,21 @@ structure.segtree <- function(tree, leaf_name = 'root'){
 }
 
 print.structure.segtree <- function(s, details = TRUE, prefix = '', level = 0){
-  if(level <= 0){
-    cat('[% pop, p(Y = 1), Gini]\n\n')
-  }
-  if(details && is.null(s$children)){
-    det <- sprintf(' --> [%s, %s, %.3f]',
-                   percent(s$details$p_population, 1),
-                   percent(s$details$p_pos, 1),
-                   s$details$gini)
-
+  det <- ''
+  if(details){
+    if(level <= 0){
+      cat('[% pop, p(Y = 1), Gini]\n\n')
+    }
+    if(is.null(s$children)){
+      det <- sprintf(' --> [%s, %s, %.3f]',
+                     percent(s$details$p_population, 1),
+                     percent(s$details$p_pos, 1),
+                     s$details$gini)
+    }
   } else{
-    det <- ''
+    if(level <= 0){
+      cat('\n')
+    }
   }
   cat(sprintf('%s%s %s\n', prefix, s$def, det))
   if(!is.null(s$children)){
