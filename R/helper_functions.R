@@ -32,8 +32,14 @@ split_one_ <- function(formula, data, segvar, ngroups = 100, ...){
   y_ALL <- c(m_A$y, m_B$y)
   g_ALL <- performance(yhat_ALL, y_ALL, ngroups = ngroups, ...)$gini
 
+  A <- classes[1]
+  B <- classes[2]
+  short_A <- ifelse(nchar(A) > 10, paste0(substr(A, 1, 7), '...'), A)
+  short_B <- ifelse(nchar(B) > 10, paste0(substr(B, 1, 7), '...'), B)
   data.frame(
     variable = segvar,
+    A = short_A,
+    B = short_B,
     p_pob_A = nrow(data_A)/nrow(data),
     p_pob_B = nrow(data_B)/nrow(data),
     gini_A_B = g_ALL,
@@ -54,12 +60,12 @@ split_.formula <- function(formula, data, segvars, ngroups = 100, ...){
     split_one_(formula, data, v, ngroups, ...)
   })
   if(all(sapply(s, is.null))){
-    tab <- data.frame(rank=0,variable='N/A',p_pob_A=0,p_pob_B=0,gini_A_B=0,gini_A=0,gini_B=0,p_pos_A=0,p_pos_B=0)
+    tab <- data.frame(rank=0,variable='N/A',A='N/A',B='N/A',p_pob_A=0,p_pob_B=0,gini_A_B=0,gini_A=0,gini_B=0,p_pos_A=0,p_pos_B=0)
   } else{
     tab <- do.call(rbind, s) %>%
       arrange(desc(gini_A_B)) %>%
       mutate(rank = row_number())
-    tab <- tab[c('rank','variable','p_pob_A','p_pob_B','gini_A_B',
+    tab <- tab[c('rank','variable','A','B','p_pob_A','p_pob_B','gini_A_B',
                  'gini_A','gini_B','p_pos_A','p_pos_B')]
   }
 
