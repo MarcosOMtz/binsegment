@@ -97,6 +97,7 @@ split_data <- function(tree, index.only = T, newdata=NULL, ...){
     apply(1, sum)
   if(any(codes == 0)){
     nms <- c('N/A', names(leaves))
+    codes <- codes + 1
   } else{
     nms <- names(leaves)
   }
