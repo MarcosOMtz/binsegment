@@ -94,8 +94,14 @@ split_data <- function(tree, index.only = T, newdata=NULL, ...){
   codes <- as.data.frame(lapply(1:length(leaves), function(i){
     i*leaf_index(leaves[[i]], newdata)
   })) %>%
-    apply(1, sum) %>%
-    names(leaves)[.]
+    apply(1, sum)
+  if(any(codes == 0)){
+    nms <- c('N/A', names(leaves))
+  } else{
+    nms <- names(leaves)
+  }
+  codes <- nms[codes]
+
   if(index.only){
     return(codes)
   } else{
