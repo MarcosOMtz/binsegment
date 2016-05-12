@@ -80,8 +80,10 @@ split_.formula <- function(formula, data, segvars, ngroups = 100, ...){
 }
 
 leaf_index <- function(leaf, data){
-  apply(data[leaf$segvars], 1, function(x){
-    all(trimws(as.character(x), which = "both") == leaf$levels)
+  aux <- sapply(data[leaf$segvars],
+                function(x) trimws(as.character(x), which = "both"))
+  apply(aux, 1, function(x){
+    all(x == leaf$levels)
   })
 }
 
