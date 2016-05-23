@@ -156,10 +156,10 @@ print.structure.segtree <- function(s, details = TRUE, prefix = '', level = 0){
       cat('[% pop, p(Y = 1), Gini]\n\n')
     }
     if(is.null(s$children)){
-      det <- sprintf(' --> [%s, %s, %.3f]',
+      det <- sprintf(' --> [%s, %s, %.1f]',
                      percent(s$details$p_population, 1),
                      percent(s$details$p_pos, 1),
-                     s$details$gini)
+                     100*s$details$gini)
     }
   } else{
     if(level <= 0){

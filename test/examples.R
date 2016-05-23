@@ -2,6 +2,7 @@ require(dplyr)
 require(tidyr)
 require(ggplot2)
 require(optimbucket)
+require(binsegment)
 
 #### Data 1
 ng <- 10000

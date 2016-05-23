@@ -48,14 +48,14 @@ print.segtree <- function(tree, ...){
   feats <- as.character(tree$formula[3])
   segvars <- paste(tree$segvars, collapse = ', ')
   population <- format(nrow(tree$d), scientific = F, big.mark = ',')
-  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\nLeaves:\n\n',
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.1f\nLeaves:\n\n',
               nleaves,
               nnodes - nleaves,
               target,
               feats,
               segvars,
               population,
-              tree$gini))
+              100*tree$gini))
   for(l in tree$leaves){
     print(l, global_pop = nrow(tree$data))
   }
@@ -96,23 +96,28 @@ split.segtree <- function(tree, leaf){
 
 print.segtree.split <- function(s, global_pop = NULL){
   if(is.null(global_pop)){
-    cat(sprintf('Population: %s\nTotal P(Y = 1): %.2f%%\nTotal Gini Index: %.3f\nDetails:\n\n',
+    cat(sprintf('Population: %s\nTotal P(Y = 1): %.2f%%\nTotal Gini Index: %.1f\nDetails:\n\n',
                 format(s$population, big.mark = ',', scientific = F),
-                100*s$p_pos_TOT, s$gini_TOT))
+                100*s$p_pos_TOT, 100*s$gini_TOT))
     p_vars <- c('p_pob_A','p_pob_B','p_pos_A','p_pos_B')
+    gini_vars <- c('gini_A_B', 'gini_A', 'gini_B')
     s$table[p_vars] <- apply(s$table[p_vars], 2, scales::percent)
+    s$table[gini_vars] <- 100*s$table[gini_vars]
     print(s$table, digits = 3)
   } else{
     p_glob <- s$population/global_pop
-    cat(sprintf('\nGlobal Population: %s\nPopulation: %s (%.1f%%)\nTotal P(Y = 1): %.2f%%\nTotal Gini Index: %.3f\nDetails:\n',
+    cat(sprintf('\nGlobal Population: %s\nPopulation: %s (%.1f%%)\nTotal P(Y = 1): %.2f%%\nTotal Gini Index: %.1f\nDetails:\n',
                 format(global_pop, big.mark = ',', scientific = F),
                 format(s$population, big.mark = ',', scientific = F),
                 100*p_glob,
-                100*s$p_pos_TOT, s$gini_TOT))
+                100*s$p_pos_TOT,
+                100*s$gini_TOT))
     s$table$p_glob_A <- s$table$p_pob_A*p_glob
     s$table$p_glob_B <- s$table$p_pob_B*p_glob
     p_vars <- c('p_pob_A','p_pob_B','p_pos_A','p_pos_B','p_glob_A','p_glob_B')
+    gini_vars <- c('gini_A_B', 'gini_A', 'gini_B')
     s$table[p_vars] <- apply(s$table[p_vars], 2, function(x) percent(x,1))
+    s$table[gini_vars] <- 100*s$table[gini_vars]
     print(s$table, digits = 3)
   }
 }
@@ -214,15 +219,17 @@ print.performance.segtree <- function(object, ...){
   feats <- as.character(tree$formula[3])
   segvars <- paste(tree$segvars, collapse = ', ')
   population <- format(nrow(tree$d), scientific = F, big.mark = ',')
-  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\n\nGini Index Using Segmentation: %.3f\n<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~',
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.1f\n\n>>>>>>> Gini Index Using Segmentation: %.1f <<<<<<<\n\nStructure:\n',
               nleaves,
               nnodes - nleaves,
               target,
               feats,
               segvars,
               population,
-              tree$gini,
-              perf$gini))
+              100*tree$gini,
+              100*perf$gini))
+  print(structure.segtree(tree))
+  cat('\n<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n')
 }
 
 

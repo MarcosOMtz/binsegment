@@ -32,14 +32,14 @@ summary.segtree <- function(tree){
 }
 
 print.summary.segtree <- function(s, ...){
-  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree Summary\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.3f\n\nStructure:\n',
+  cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree Summary\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.1f\n\nStructure:\n',
               s$leaves,
               s$intermediate_nodes,
               as.character(s$formula[2]),
               as.character(s$formula[3]),
               paste(s$segvars, collapse = ', '),
               format(s$population, scientific = F, big.mark = ','),
-              s$gini))
+              100*s$gini))
   print.structure.segtree(s$structure, prefix='\t', ...)
   cat('\n\nLeaf summary:\n\n')
 
@@ -48,7 +48,9 @@ print.summary.segtree <- function(s, ...){
                                      100*s$info$best_split_distr_B)
   s$info$population <- format(s$info$population, scientific = F, big.mark = ',')
   p_vars <- c('p_population','p_pos')
+  gini_vars <- c('gini','best_split_gini')
   s$info[p_vars] <- apply(s$info[p_vars], 2, function(x) percent(x,1))
+  s$info[gini_vars] <- 100*s$info[gini_vars]
   print(s$info[c('leaf','depth','terminal','population','p_population','best_split_distr',
                  'p_pos','gini','best_split_gini')], digits=3)
   cat('<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~')
