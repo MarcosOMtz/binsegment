@@ -1,9 +1,4 @@
 
-require(dplyr)
-require(tidyr)
-require(ggplot2)
-require(optimbucket)
-
 percent <- function(x, digits=0){
   fmt <- sprintf('%%.%df', digits)
   sprintf(paste0(fmt,'%%'), 100*x)
@@ -79,6 +74,8 @@ split_.formula <- function(formula, data, segvars, ngroups = 100, ...){
   out
 }
 
+#' @rdname split_data
+#' @export
 leaf_index <- function(leaf, data){
   aux <- sapply(data[leaf$segvars],
                 function(x) trimws(as.character(x), which = "both"))
@@ -87,6 +84,23 @@ leaf_index <- function(leaf, data){
   })
 }
 
+#' Apply Segmentation to Data
+#'
+#' Returns a factor with the terminal node each observation corresponds to.
+#' Alternatively, returns a list of \code{data.frame}s corresponding to each
+#' terminal node. This function is similar to some predict methods.
+#'
+#' @param tree tree An object of class \code{segtree}
+#' @param index.only Whether to return the segmentation variable (if
+#'   \code{TRUE}, the default) or to actually split the data
+#' @param newdata A \code{data.frame} to be split. If \code{NULL}, then the
+#'   tree's data is used
+#' @param leaf An object of class \code{leaf}
+#' @param data A \code{data.frame} to be segmented
+#' @details The function \code{split_data} a convenient wrapper of
+#'   \code{leaf_index}. \code{leaf_index} simply returns a boolean vector of
+#'   whether each observation is in the given leaf or not.
+#' @export
 split_data <- function(tree, index.only = T, newdata=NULL, ...){
   if(is.null(newdata)){
     newdata <- tree$data
@@ -112,6 +126,19 @@ split_data <- function(tree, index.only = T, newdata=NULL, ...){
   }
 }
 
+
+#' Structure of a Segmentation Tree
+#'
+#' Shows a tree-like data structure with the dependences between the nodes of a
+#' \code{segtree}.
+#' @param tree tree An object of class \code{segtree}
+#' @param leaf_name The name of a leaf in the tree
+#' @param details The level of details to show in the tree structure. 0 means no
+#'   details, 1 means only on terminal nodes, 2 means on all nodes and >= 3
+#'   means on all nodes plus extra information
+#' @return An object of class \code{structure.segtree}, which draws the tree's
+#'   structure in a text graph
+#' @export
 structure.segtree <- function(tree, leaf_name = 'root'){
   leaf <- tree$leaves[[leaf_name]]
   depth <- length(leaf$segvars)
@@ -153,6 +180,8 @@ structure.segtree <- function(tree, leaf_name = 'root'){
   s
 }
 
+#' @rdname structure.segtree
+#' @export
 print.structure.segtree <- function(s, details = c(0, 1, 2, 3), prefix = '', level = 0){
   det <- ''
   if(level <= 0){

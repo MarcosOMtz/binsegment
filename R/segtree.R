@@ -4,6 +4,17 @@ require(tidyr)
 require(ggplot2)
 require(optimbucket)
 
+#' Create Segmentation Trees
+#'
+#' \code{segtree} builds a basic segmentation tree whose nodes can then be splitted with \code{fork} and evaluated with a variety of functions.
+#'
+#' @param formula A formula specifying the response and features for the logistic regressions
+#' @param data A \code{data.frame} containing the variables specified in formula and in \code{segvars}
+#' @param segvars A character vector with the names of the segmentation variables to be tried
+#' @param fast If \code{FALSE} (the default), evaluate the splits for each node. Otherwise construct a simpler tree which takes less time to build
+#' @return An object of class \code{segtree}
+#' @seealso \code{\link{fork}}, \code{\link{summary.segtree}}, \code{\link{performance.segtree}}, \code{\link{split_data}}, \code{\link{split.segtree}}
+#' @export
 segtree <- function(formula, data, segvars, fast=FALSE, ...){
 
   resp <- as.character(formula)[2]
@@ -41,6 +52,8 @@ segtree <- function(formula, data, segvars, fast=FALSE, ...){
   out
 }
 
+#' @rdname segtree
+#' @export
 print.segtree <- function(tree, ...){
   nnodes <- length(tree$leaves)
   nleaves <- sum(sapply(tree$leaves, function(l) l$terminal))
@@ -62,6 +75,16 @@ print.segtree <- function(tree, ...){
   cat('<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~')
 }
 
+#' Evaluate Splits on a Tree
+#'
+#' This function is used internally to try out all the remaining segmentation
+#' variables on a given node.
+#'
+#' @param tree An object of class \code{segtree}
+#' @param leaf Either the name of a node or an actual node of \code{tree}
+#' @return A simple object of class \code{segtree.split} containing the results
+#'   of splitting with each remaining segmentation variable
+#' @export
 split.segtree <- function(tree, leaf){
   if(class(tree) != 'segtree' ||
      (class(leaf) != 'leaf' &&
@@ -94,6 +117,8 @@ split.segtree <- function(tree, leaf){
   split_.formula(tree$formula, dat, segvars)
 }
 
+#' @rdname split.segtree
+#' @export
 print.segtree.split <- function(s, global_pop = NULL){
   if(is.null(global_pop)){
     cat(sprintf('Population: %s\nTotal P(Y = 1): %.2f%%\nTotal Gini Index: %.1f\nDetails:\n\n',
@@ -122,8 +147,25 @@ print.segtree.split <- function(s, global_pop = NULL){
   }
 }
 
-
+#' Fork Terminal Nodes
+#'
+#' Actually performs a split on a given (usually terminal) node of a
+#' \code{segree}.
+#'
+#' @param tree An object of class \code{segtree}
+#' @param leaf Either the name of a node or an actual node of \code{tree} which
+#'   is to be splitted
+#' @param segvar Name of the segmentation variable to used to split
+#' @param names A length-2 character vector containing *unique* names for the
+#'   resulting nodes
+#' @param fast Whether (\code{FALSE}) or not (\code{TRUE}) to try out the splits
+#'   of the resulting nodes
+#' @return A tree with two new nodes corresponding to the new split that was requested
+#' @export
 fork <- function(x, ...) UseMethod('fork')
+
+#' @rdname fork
+#' @export
 fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
   if(is.character(leaf)){
     leaf_ix <- which(names(tree$leaves) == leaf)
@@ -174,7 +216,21 @@ fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
 # }
 # plot.segtree(tt2)
 
-#performance <- function(x, ...) UseMethod('performance')
+
+#' Evaluate the Performance of a Segmentation
+#'
+#' Compares the Gini Index before and after applying the segmentation.
+#'
+#' @param tree An object of class \code{segtree}
+#' @param details The level of details to show in the tree structure (see
+#'   \code{\link{structure.segtree}})
+#' @return An object of class \code{performance.segtree} with the most important
+#'   stats of the tree's performance
+#' @export
+performance <- function(x, ...) UseMethod('performance')
+
+#' @rdname performance
+#' @export
 performance.segtree <- function(tree, ...){
   leaves <- tree$leaves[sapply(tree$leaves, function(l) l$terminal)]
   yhats <- list()
@@ -210,9 +266,10 @@ performance.segtree <- function(tree, ...){
   out
 }
 
-print.performance.segtree <- function(object, details = c(1, 2, 3, 0), ...){
-  tree <- object$tree
-  perf <- object$performance
+#' @rdname performance
+#' @export
+print.performance.segtree <- function(tree, details = c(1, 2, 3, 0), ...){
+  perf <- tree$performance
   nnodes <- length(tree$leaves)
   nleaves <- sum(sapply(tree$leaves, function(l) l$terminal))
   target <- as.character(tree$formula[2])

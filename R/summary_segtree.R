@@ -1,4 +1,16 @@
 
+#' Summarize Segmentation Trees
+#'
+#' Show the most important facts about a tree, including a text drawing of its
+#' structure.
+#'
+#' @param tree tree An object of class \code{segtree}
+#' @param s An object of class \code{summary.segtree}
+#' @param details The level of details to show in the tree structure (see
+#'   \code{\link{structure.segtree}})
+#' @return An object of class \code{summary.segtree} which prints the most
+#'   important features and structure of the tree in a nice and easy-to-see way
+#' @export
 summary.segtree <- function(tree){
   out <- list(
     population = nrow(tree$data),
@@ -31,6 +43,8 @@ summary.segtree <- function(tree){
   out
 }
 
+#' @rdname summary.segtree
+#' @export
 print.summary.segtree <- function(s, details = c(1, 2, 3, 0)){
   cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree Summary\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.1f\n\nStructure:\n',
               s$leaves,
