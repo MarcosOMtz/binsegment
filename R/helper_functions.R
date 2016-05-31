@@ -125,6 +125,8 @@ structure.segtree <- function(tree, leaf_name = 'root'){
     s <- list(name=leaf_name,
               def=def,
               details=list(
+                population = leaf$splits$population,
+                tot_population = nrow(tree$data),
                 p_population=leaf$splits$population/nrow(tree$data),
                 p_pos=leaf$splits$p_pos_TOT,
                 gini=leaf$splits$gini_TOT
@@ -139,6 +141,8 @@ structure.segtree <- function(tree, leaf_name = 'root'){
     s <- list(name=leaf_name,
               def=def,
               details=list(
+                population = leaf$splits$population,
+                tot_population = nrow(tree$data),
                 p_population=leaf$splits$population/nrow(tree$data),
                 p_pos=leaf$splits$p_pos_TOT,
                 gini=leaf$splits$gini_TOT
@@ -149,22 +153,34 @@ structure.segtree <- function(tree, leaf_name = 'root'){
   s
 }
 
-print.structure.segtree <- function(s, details = TRUE, prefix = '', level = 0){
+print.structure.segtree <- function(s, details = c(0, 1, 2, 3), prefix = '', level = 0){
   det <- ''
-  if(details){
-    if(level <= 0){
-      cat('[% pop, p(Y = 1), Gini]\n\n')
+  if(level <= 0){
+    if(details[1] >= 1){
+      if(details[1] <= 2){
+        cat('[% pop, p(Y = 1), Gini]\n\n')
+      } else if(details[1] >=3){
+        cat('[pop (% pop), bads (p(Y = 1)), Gini]\n\n')
+      }
     }
-    if(is.null(s$children)){
-      det <- sprintf(' --> [%s, %s, %.1f]',
-                     percent(s$details$p_population, 1),
-                     percent(s$details$p_pos, 1),
-                     100*s$details$gini)
+  }
+  if(details[1] >= 1){
+    if(details[1] <=2){
+      if(details[1] >= 2 | is.null(s$children)){
+        det <- sprintf(' --> [%s, %s, %.1f]',
+                       percent(s$details$p_population, 1),
+                       percent(s$details$p_pos, 1),
+                       100*s$details$gini)
+      }
+    } else if(details[1] == 3){
+        det <- sprintf(' --> [%s (%s), %s (%s), %.1f]',
+                       format(s$details$population, big.mark = ','),
+                       percent(s$details$p_population, 1),
+                       format(round(s$details$p_pos*s$details$population), big.mark = ','),
+                       percent(s$details$p_pos, 1),
+                       100*s$details$gini)
     }
-  } else{
-    if(level <= 0){
-      cat('\n')
-    }
+
   }
   cat(sprintf('%s%s %s\n', prefix, s$def, det))
   if(!is.null(s$children)){

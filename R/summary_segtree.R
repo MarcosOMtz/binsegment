@@ -31,7 +31,7 @@ summary.segtree <- function(tree){
   out
 }
 
-print.summary.segtree <- function(s, ...){
+print.summary.segtree <- function(s, details = c(1, 2, 3, 0)){
   cat(sprintf('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ >>\nSegmentation Tree Summary\n\nNumber of Leaves: %d\nNumber of Intermediate Nodes: %d\nTarget: %s\nRegression Variables:\n\t%s\nAvailable Segmentation Variables:\n\t%s\nPopulation: %s\nGlobal Gini Index: %.1f\n\nStructure:\n',
               s$leaves,
               s$intermediate_nodes,
@@ -40,7 +40,7 @@ print.summary.segtree <- function(s, ...){
               paste(s$segvars, collapse = ', '),
               format(s$population, scientific = F, big.mark = ','),
               100*s$gini))
-  print.structure.segtree(s$structure, prefix='\t', ...)
+  print.structure.segtree(s$structure, prefix='  ', details=details[1])
   cat('\n\nLeaf summary:\n\n')
 
   s$info$best_split_distr <- sprintf('(%.0f%% / %.0f%%)',
