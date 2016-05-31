@@ -210,7 +210,7 @@ performance.segtree <- function(tree, ...){
   out
 }
 
-print.performance.segtree <- function(object, ...){
+print.performance.segtree <- function(object, details = c(1, 2, 3, 0), ...){
   tree <- object$tree
   perf <- object$performance
   nnodes <- length(tree$leaves)
@@ -228,7 +228,7 @@ print.performance.segtree <- function(object, ...){
               population,
               100*tree$gini,
               100*perf$gini))
-  print(structure.segtree(tree))
+  print(structure.segtree(tree, 'root'), details=details[1])
   cat('\n<< ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n')
 }
 

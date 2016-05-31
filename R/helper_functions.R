@@ -172,7 +172,7 @@ print.structure.segtree <- function(s, details = c(0, 1, 2, 3), prefix = '', lev
                        percent(s$details$p_pos, 1),
                        100*s$details$gini)
       }
-    } else if(details[1] == 3){
+    } else if(details[1] >= 3){
         det <- sprintf(' --> [%s (%s), %s (%s), %.1f]',
                        format(s$details$population, big.mark = ','),
                        percent(s$details$p_population, 1),
