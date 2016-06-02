@@ -1,7 +1,7 @@
 Package: binsegment
 Type: Package
 Title: Binary Segmentation Trees
-Version: 0.5.9
+Version: 0.6.1
 Author: Felipe Gerard
 Maintainer: Felipe Gerard <felipegerard@gmail.com>
 Description: This package provides semi-automatic tools for producing client
@@ -18,3 +18,4 @@ Imports:
     optimbucket
 LazyData: TRUE
 RoxygenNote: 5.0.1
+Suggests: testthat

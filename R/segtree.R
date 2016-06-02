@@ -37,7 +37,7 @@ segtree <- function(formula, data, segvars, fast=FALSE, ...){
     splits <- split_.formula(formula, data, segvars, ...)
     m0 <- glm(formula, data, family=binomial(link='logit'))
     yhat0 <- predict(m0, data, type='link')
-    g0 <- performance(yhat0, m0$y, ...)$gini
+    g0 <- optimbucket::performance(yhat0, m0$y, ...)$gini
   }
   out <- list(
     formula = formula,
@@ -166,7 +166,7 @@ fork <- function(x, ...) UseMethod('fork')
 
 #' @rdname fork
 #' @export
-fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
+fork.segtree <- function(tree, leaf, segvar, names=NULL, fast=tree$fast){
   if(is.character(leaf)){
     leaf_ix <- which(names(tree$leaves) == leaf)
     if(length(leaf_ix) == 0){
@@ -183,7 +183,26 @@ fork.segtree <- function(tree, leaf, segvar, names, fast=tree$fast){
     stop('Please supply a leaf name or a leaf object.')
   }
 
+  if(!is.character(segvar) |
+     length(segvar) != 1 |
+     !(segvar %in% tree$segvars)){
+    stop(sprintf('Invalid value for segvar (%s). Please choose a variable in tree$segvars.', segvar))
+  }
+
+  if(!(segvar %in% tree$segvars)){
+    warning(sprintf('Segmentation variable %s is not present in tree$segvars and so will not appear in any splits. Run a code similar to "<your_tree>$segvars <- c(<your_tree>$segvars, %s)" to add it and avoid this warning.', segvar, segvar))
+  }
   classes <- levels(as.factor(tree$data[[segvar]]))[1:2]
+
+  if(is.null(names) | !is.character(names) | length(names) < 2){
+    if(is.null(names)){
+      message('No names for new nodes provided. Choosing names automatically...')
+    } else{
+      warning('Improper names chosen. Choosing automatically...')
+    }
+    names <- paste(sprintf('%s > %s =', leaf$name, segvar), classes)
+  }
+
   leaf_A <- leaf(
     segvars = c(leaf$segvars, segvar),
     levels = c(leaf$levels, classes[1]),
@@ -268,8 +287,9 @@ performance.segtree <- function(tree, ...){
 
 #' @rdname performance
 #' @export
-print.performance.segtree <- function(tree, details = c(1, 2, 3, 0), ...){
-  perf <- tree$performance
+print.performance.segtree <- function(object, details = c(1, 2, 3, 0), ...){
+  tree <- object$tree
+  perf <- object$performance
   nnodes <- length(tree$leaves)
   nleaves <- sum(sapply(tree$leaves, function(l) l$terminal))
   target <- as.character(tree$formula[2])

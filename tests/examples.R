@@ -48,11 +48,11 @@ ggplot(d2, aes(z, prob, fill=y)) +
 tt <- segtree(y ~ x + z, (d), c('class1','class2','class3'), fast=F)
 summary(tt)
 tt
-tt2 <- fork.segtree(tt, 'root', 'class3', c('L1_A', 'L1_B'), fast = F)
+tt2 <- fork(tt, 'root', 'class3', c('L1_A', 'L1_B'), fast = F)
 summary(tt2)
 tt2
 # split.segtree(tt2, 'L1_A')
-tt3 <- fork.segtree(tt2, 'L1_A', 'class2', c('L1_A_L2_A', 'L1_A_L2_B'))
+tt3 <- fork(tt2, 'L1_A', 'class2', c('L1_A_L2_A', 'L1_A_L2_B'))
 summary(tt3)
 tt3
 

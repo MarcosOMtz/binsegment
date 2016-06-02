@@ -5,27 +5,38 @@ percent <- function(x, digits=0){
 }
 
 split_one_ <- function(formula, data, segvar, ngroups = 100, ...){
-  classes <- levels(as.factor(data[[segvar]]))[1:2]
+  fac <- as.factor(data[[segvar]])
+  unq <- unique(fac)
+  unq <- unq[!is.na(unq)]
+  if(length(unq) < 2){
+    warning(sprintf('Segmentation variable %s has less than two unique values available. Skipping...', segvar))
+    return(NULL)
+  } else if(length(unq) > 2){
+    warning(sprintf('Segmentation variable %s has more than two unique values. Using only the first two: "%s", "%s"', segvar, as.character(levels(fac)[1]), as.character(levels(fac)[2])))
+  }
+  classes <- levels(fac)[1:2]
+
   ix_A <- data[[segvar]] == classes[1]
   ix_B <- data[[segvar]] == classes[2]
-  if(length(unique(data[[segvar]])) < 2 || sum(ix_A) == 0 || sum(ix_B) == 0){
-    warning(sprintf('Variable %s has no levels of some of its classes. Skipping...', segvar))
-    return(NULL)
+  if(any(is.na(ix_A)) | any(is.na(ix_B))){
+    warning(sprintf('Segmentation variable %s NA values. Removing...', segvar))
+    ix_A <- ix_A[!is.na(ix_A)]
+    ix_B <- ix_B[!is.na(ix_B)]
   }
   data_A <- data[ix_A,]
   data_B <- data[ix_B,]
 
   m_A <- glm(formula, data_A, family=binomial(link='logit'))
   yhat_A <- predict(m_A, data_A, type='link')
-  g_A <- performance(yhat_A, m_A$y, ngroups = ngroups, ...)$gini
+  g_A <- optimbucket::performance(yhat_A, m_A$y, ngroups = ngroups, ...)$gini
 
   m_B <- glm(formula, data_B, family=binomial(link='logit'))
   yhat_B <- predict(m_B, data_B, type='link')
-  g_B <- performance(yhat_B, m_B$y, ngroups = ngroups, ...)$gini
+  g_B <- optimbucket::performance(yhat_B, m_B$y, ngroups = ngroups, ...)$gini
 
   yhat_ALL <- c(yhat_A, yhat_B)
   y_ALL <- c(m_A$y, m_B$y)
-  g_ALL <- performance(yhat_ALL, y_ALL, ngroups = ngroups, ...)$gini
+  g_ALL <- optimbucket::performance(yhat_ALL, y_ALL, ngroups = ngroups, ...)$gini
 
   A <- classes[1]
   B <- classes[2]
@@ -49,7 +60,7 @@ split_one_ <- function(formula, data, segvar, ngroups = 100, ...){
 split_.formula <- function(formula, data, segvars, ngroups = 100, ...){
   m0 <- glm(formula, data, family=binomial(link='logit'))
   yhat0 <- predict(m0, data, type='link')
-  g0 <- performance(yhat0, m0$y, ngroups = ngroups, ...)$gini
+  g0 <- optimbucket::performance(yhat0, m0$y, ngroups = ngroups, ...)$gini
 
   s <- lapply(segvars, function(v){
     split_one_(formula, data, v, ngroups, ...)
