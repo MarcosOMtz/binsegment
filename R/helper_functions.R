@@ -107,16 +107,25 @@ leaf_index <- function(leaf, data){
 #' @param newdata A \code{data.frame} to be split. If \code{NULL}, then the
 #'   tree's data is used
 #' @param leaf An object of class \code{leaf}
-#' @param data A \code{data.frame} to be segmented
+#' @param data [\code{leaf_index} only] A \code{data.frame} to be segmented
 #' @details The function \code{split_data} a convenient wrapper of
 #'   \code{leaf_index}. \code{leaf_index} simply returns a boolean vector of
 #'   whether each observation is in the given leaf or not.
 #' @export
-split_data <- function(tree, index.only = T, newdata=NULL, ...){
+split_data <- function(tree, index.only = T, newdata=NULL){
   if(is.null(newdata)){
+    message("No data provided. Splitting the tree's data.")
     newdata <- tree$data
+  } else if(!is.matrix(newdata) && !is.data.frame(newdata)){
+    stop('newdata must be a matrix or data.frame, not a vector.')
   }
   newdata <- as.data.frame(newdata)
+  actual_segvars <- unique(unlist(lapply(tree$leaves, function(x) x$segvars)))
+  if(!(all(actual_segvars %in% names(newdata)))){
+    mis <- setdiff(actual_segvars, names(newdata))
+    stop(sprintf('The following variables are not present in newdata: %s',
+         paste(mis, collapse = ', ')))
+  }
   leaves <- tree$leaves[sapply(tree$leaves, function(x) x$terminal)]
   codes <- as.data.frame(lapply(1:length(leaves), function(i){
     i*leaf_index(leaves[[i]], newdata)
@@ -133,7 +142,7 @@ split_data <- function(tree, index.only = T, newdata=NULL, ...){
   if(index.only){
     return(codes)
   } else{
-    return(split.data.frame(newdata, as.factor(codes), ...))
+    return(split.data.frame(x=newdata, f=as.factor(codes)))
   }
 }
 

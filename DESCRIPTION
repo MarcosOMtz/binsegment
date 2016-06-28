@@ -1,7 +1,7 @@
 Package: binsegment
 Type: Package
 Title: Binary Segmentation Trees
-Version: 0.6.1
+Version: 0.6.2
 Author: Felipe Gerard
 Maintainer: Felipe Gerard <felipegerard@gmail.com>
 Description: This package provides semi-automatic tools for producing client
